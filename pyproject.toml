@@ -1,27 +1,44 @@
-[tool.poetry]
+[project]
 name = "homeassistant-vacuum-viomi"
-version = "0.0.4"
+version = "0.1.0"
 description = "Integration of a Xiaomi Viomi vacuum devices"
-authors = ["Artem Poliukhovych <me@2mio.com>"]
-license = "MIT"
+license = { text = "MIT" }
+authors = [{ name = "Artem Poliukhovych", email = "me@2mio.com" }]
+# Home Assistant 2026.10 requires Python 3.14.2 or newer.
+requires-python = ">=3.14.2"
+# Keep in sync with custom_components/xiaomi_viomi/manifest.json, which in turn
+# has to match the pins of Home Assistant's own xiaomi_miio integration.
+dependencies = [
+    "python-miio==0.5.12",
+    "construct==2.10.68",
+]
 
-[tool.poetry.dependencies]
-python = "^3.8"
-python-miio = "^0.5.9"
-voluptuous = "^0.12.1"
-construct = "^2.10.67"
-homeassistant = "^2021.12.8"
+[dependency-groups]
+dev = [
+    "pytest-homeassistant-custom-component==0.13.375",
+    "mypy",
+    "ruff",
+]
 
-[tool.poetry.dev-dependencies]
-flake8 = "^3.9.2"
-flake8-docstrings = "^1.6.0"
-mypy = "^0.910"
-pytest-cov = "^2.12.1"
-black = "^21.6b0"
-isort = "^5.9.1"
-pytest-homeassistant-custom-component = "^0.5.12"
-micloud = "^0.5"
+[tool.uv]
+# netifaces is only needed by python-miio's firmware updater, which this
+# integration does not use, and it fails to build on recent Python versions.
+override-dependencies = ["netifaces; python_version < '3'"]
 
-[build-system]
-requires = ["poetry>=0.12"]
-build-backend = "poetry.masonry.api"
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "UP", "W"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["custom_components", "tests"]
+
+[tool.mypy]
+ignore_missing_imports = true
+python_version = "3.14"

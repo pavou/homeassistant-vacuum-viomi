@@ -1,13 +1,15 @@
 {
   "config": {
     "error": {
-      "invalid_auth": "Неполная информация для настройки устройства, не указан хост или токен",
+      "invalid_auth": "Неверная аутентификация, проверьте токен API",
       "cannot_connect": "Не удалось подключиться",
-      "invalid_parameters": "Предоставлены неверные параметры устройства",
       "unknown": "Произошла неизвесная ошибка"
     },
     "abort": {
-      "already_configured": "Устройство уже настроено"
+      "already_configured": "Устройство уже настроено",
+      "cannot_connect": "Не удалось подключиться",
+      "invalid_auth": "Неверная аутентификация, проверьте токен API",
+      "unknown": "Произошла неизвесная ошибка"
     },
     "flow_title": "{name}",
     "step": {
@@ -20,6 +22,17 @@
         "description": "Для подключения требуется 32-х значный Токен API. О том, как получить токен, Вы можете узнать здесь:\nhttps://www.home-assistant.io/integrations/xiaomi_miio#retrieving-the-access-token.\nОбратите внимание, что этот токен отличается от ключа, используемого при интеграции Xiaomi Aqara.",
         "title": "Подключение к устройству Xiaomi Viomi"
       }
+    }
+  },
+  "exceptions": {
+    "invalid_fan_speed": {
+      "message": "Скорость вентилятора не распознана ({fan_speed}). Допустимые значения: {valid_speeds}."
+    }
+  },
+  "issues": {
+    "deprecated_yaml": {
+      "title": "Конфигурация Xiaomi Viomi через YAML устарела",
+      "description": "Настройка Xiaomi Viomi через YAML устарела.\n\nВаша конфигурация YAML была автоматически импортирована в интерфейс. Удалите платформу `xiaomi_viomi` из раздела `vacuum:` в YAML и перезапустите Home Assistant."
     }
   }
 }

@@ -1,147 +1,39 @@
 """Config flow to configure Xiaomi Viomi."""
-import logging
-from typing import Any, Dict, Optional
 
-import voluptuous as vol
+import logging
+from typing import Any
+
+import probatio
 from construct.core import ChecksumError
-from homeassistant import config_entries
-from homeassistant.components.xiaomi_miio import CONF_MODEL
+from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import (
     CONF_HOST,
     CONF_MAC,
+    CONF_MODEL,
     CONF_NAME,
-    CONF_PLATFORM,
     CONF_TOKEN,
     DEVICE_DEFAULT_NAME,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult
-from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.device_registry import format_mac
 from miio import DeviceException
-from miio.device import DeviceInfo
 from miio.integrations.vacuum.viomi.viomivacuum import ViomiVacuum
 
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-DEVICE_CONFIG = vol.Schema(
+DEVICE_CONFIG = probatio.Schema(
     {
-        vol.Required(CONF_HOST): str,
-        vol.Required(CONF_TOKEN): vol.All(str, vol.Length(min=32, max=32)),
-        vol.Optional(CONF_NAME, default=DEVICE_DEFAULT_NAME): str,
+        probatio.Required(CONF_HOST): str,
+        probatio.Required(CONF_TOKEN): probatio.All(
+            str, probatio.Length(min=32, max=32)
+        ),
+        probatio.Optional(CONF_NAME, default=DEVICE_DEFAULT_NAME): str,
     }
 )
-
-
-class ViomiDeviceHub:
-    """Class to async connect to a Viomi Device."""
-
-    def __init__(self, hass: HomeAssistant):
-        """Initialize the entity."""
-        self._hass = hass
-        self._device: Optional[ViomiVacuum] = None
-        self._device_info: Optional[DeviceInfo] = None
-
-    @property
-    def device(self):
-        """Return the class containing all connections to the device."""
-        return self._device
-
-    @property
-    def device_info(self):
-        """Return the class containing device info."""
-        return self._device_info
-
-    async def async_device_is_connectable(self, host: str, token: str) -> bool:
-        """Connect to the Xiaomi Device."""
-        _LOGGER.debug("Initializing with host %s (token %s...)", host, token[:5])
-
-        try:
-            self._device = ViomiVacuum(host, token)
-            self._device_info = await self._hass.async_add_executor_job(
-                self._device.info
-            )
-
-            if self._device_info:
-                _LOGGER.debug("%s detected", self._device_info.model)
-        except DeviceException as error:
-            if isinstance(error.__cause__, ChecksumError):
-                raise ConfigEntryAuthFailed(error) from error
-
-            _LOGGER.error(
-                "DeviceException during setup of Viomi device with host %s",
-                host,
-            )
-            return False
-
-        return True
-
-
-async def validate_input(hass: HomeAssistant, data: Dict[str, Any]) -> Dict[str, Any]:
-    hub = ViomiDeviceHub(hass)
-
-    if not await hub.async_device_is_connectable(data[CONF_HOST], data[CONF_TOKEN]):
-        raise InvalidAuth
-
-    DEVICE_CONFIG.extend({vol.Optional(CONF_PLATFORM): str})(data)
-
-    name = data[CONF_NAME] if CONF_NAME in data else hub.device_info.model
-
-    return {
-        CONF_HOST: data[CONF_HOST],
-        CONF_TOKEN: data[CONF_TOKEN],
-        CONF_MODEL: hub.device_info.model,
-        CONF_NAME: name,
-        CONF_MAC: format_mac(hub.device_info.mac_address),
-    }
-
-
-class XiaomiViomiFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore
-    """Handle a Xiaomi Viomi config flow."""
-
-    VERSION = 1
-
-    async def async_step_user(
-        self, user_input: Optional[Dict[str, Any]] = None
-    ) -> FlowResult:
-        """Handle the initial step."""
-        if user_input is None:
-            return self.async_show_form(step_id="user", data_schema=DEVICE_CONFIG)
-
-        errors = {}
-        try:
-            info = await validate_input(self.hass, user_input)
-        except CannotConnect:
-            errors["base"] = "cannot_connect"
-        except (InvalidAuth, ConfigEntryAuthFailed):
-            errors["base"] = "invalid_auth"
-        except Exception:  # pylint: disable=broad-except
-            _LOGGER.exception("Unexpected exception")
-            errors["base"] = "unknown"
-        else:
-            unique_id = info[CONF_MAC]
-            existing_entry = await self.async_set_unique_id(
-                unique_id, raise_on_progress=False
-            )
-
-            if existing_entry:
-                data = existing_entry.data.copy()
-                data[CONF_HOST] = info[CONF_HOST]
-                data[CONF_TOKEN] = info[CONF_TOKEN]
-                data[CONF_NAME] = info[CONF_NAME] or existing_entry.title
-                data[CONF_MODEL] = info[CONF_MODEL]
-
-                self.hass.config_entries.async_update_entry(existing_entry, data=data)
-                await self.hass.config_entries.async_reload(existing_entry.entry_id)
-                return self.async_abort(reason="already_configured")
-
-            return self.async_create_entry(title=info[CONF_NAME], data=info)
-
-        return self.async_show_form(
-            step_id="user", data_schema=DEVICE_CONFIG, errors=errors
-        )
 
 
 class CannotConnect(HomeAssistantError):
@@ -150,3 +42,94 @@ class CannotConnect(HomeAssistantError):
 
 class InvalidAuth(HomeAssistantError):
     """Error to indicate there is invalid auth."""
+
+
+async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+    """Connect to the device and return the data of the config entry."""
+    device = ViomiVacuum(data[CONF_HOST], data[CONF_TOKEN])
+
+    try:
+        info = await hass.async_add_executor_job(device.info)
+    except DeviceException as error:
+        if isinstance(error.__cause__, ChecksumError):
+            raise InvalidAuth from error
+
+        _LOGGER.debug("Cannot connect to the Viomi device %s", data[CONF_HOST])
+        raise CannotConnect from error
+
+    return {
+        CONF_HOST: data[CONF_HOST],
+        CONF_TOKEN: data[CONF_TOKEN],
+        CONF_MODEL: info.model,
+        CONF_NAME: data.get(CONF_NAME) or info.model,
+        CONF_MAC: format_mac(info.mac_address),
+    }
+
+
+class XiaomiViomiFlowHandler(ConfigFlow, domain=DOMAIN):
+    """Handle a Xiaomi Viomi config flow."""
+
+    VERSION = 1
+
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle the initial step."""
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            try:
+                info = await validate_input(self.hass, user_input)
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
+            except InvalidAuth:
+                errors["base"] = "invalid_auth"
+            except Exception:  # noqa: BLE001
+                _LOGGER.exception("Unexpected exception")
+                errors["base"] = "unknown"
+            else:
+                return await self._async_create_or_update_entry(info)
+
+        return self.async_show_form(
+            step_id="user", data_schema=DEVICE_CONFIG, errors=errors
+        )
+
+    async def async_step_import(self, import_data: dict[str, Any]) -> ConfigFlowResult:
+        """Import the configuration of the legacy YAML platform."""
+        try:
+            info = await validate_input(self.hass, import_data)
+        except CannotConnect:
+            _LOGGER.error(
+                "Cannot import the YAML configuration of %s, check the host",
+                import_data[CONF_HOST],
+            )
+            return self.async_abort(reason="cannot_connect")
+        except InvalidAuth:
+            _LOGGER.error(
+                "Cannot import the YAML configuration of %s, check the token",
+                import_data[CONF_HOST],
+            )
+            return self.async_abort(reason="invalid_auth")
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception("Unexpected exception")
+            return self.async_abort(reason="unknown")
+
+        # Only tell the user to remove the YAML once it has been imported.
+        ir.async_create_issue(
+            self.hass,
+            DOMAIN,
+            "deprecated_yaml",
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="deprecated_yaml",
+        )
+        return await self._async_create_or_update_entry(info)
+
+    async def _async_create_or_update_entry(
+        self, info: dict[str, Any]
+    ) -> ConfigFlowResult:
+        await self.async_set_unique_id(info[CONF_MAC], raise_on_progress=False)
+        # A known device gets the new host, token, name and model, and is reloaded.
+        self._abort_if_unique_id_configured(updates=info)
+
+        return self.async_create_entry(title=info[CONF_NAME], data=info)

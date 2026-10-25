@@ -1,23 +1,12 @@
 """Constants for Xiaomi Viomi integration."""
 
-from homeassistant.components.vacuum import (
-    STATE_CLEANING,
-    STATE_DOCKED,
-    STATE_IDLE,
-    STATE_RETURNING,
-    SUPPORT_BATTERY,
-    SUPPORT_FAN_SPEED,
-    SUPPORT_LOCATE,
-    SUPPORT_PAUSE,
-    SUPPORT_RETURN_HOME,
-    SUPPORT_SEND_COMMAND,
-    SUPPORT_START,
-    SUPPORT_STATE,
-    SUPPORT_STOP,
-)
+from datetime import timedelta
+
+from homeassistant.components.vacuum import VacuumActivity, VacuumEntityFeature
 
 DOMAIN = "xiaomi_viomi"
-CONF_FLOW_TYPE = "config_flow_device"
+
+SCAN_INTERVAL = timedelta(seconds=30)
 
 DEVICE_PROPERTIES = [
     "battary_life",
@@ -79,23 +68,22 @@ ERRORS_FALSE_POSITIVE = (
 )
 
 SUPPORT_VIOMI = (
-    SUPPORT_PAUSE
-    | SUPPORT_STOP
-    | SUPPORT_RETURN_HOME
-    | SUPPORT_FAN_SPEED
-    | SUPPORT_BATTERY
-    | SUPPORT_SEND_COMMAND
-    | SUPPORT_LOCATE
-    | SUPPORT_STATE
-    | SUPPORT_START
+    VacuumEntityFeature.PAUSE
+    | VacuumEntityFeature.STOP
+    | VacuumEntityFeature.RETURN_HOME
+    | VacuumEntityFeature.FAN_SPEED
+    | VacuumEntityFeature.SEND_COMMAND
+    | VacuumEntityFeature.LOCATE
+    | VacuumEntityFeature.STATE
+    | VacuumEntityFeature.START
 )
 
-STATE_CODE_TO_STATE = {
-    0: STATE_IDLE,  # IdleNotDocked
-    1: STATE_IDLE,  # Idle
-    2: STATE_IDLE,  # Idle2
-    3: STATE_CLEANING,  # Cleaning
-    4: STATE_RETURNING,  # Returning
-    5: STATE_DOCKED,  # Docked
-    6: STATE_CLEANING,  # VacuumingAndMopping
+STATE_CODE_TO_ACTIVITY = {
+    0: VacuumActivity.IDLE,  # IdleNotDocked
+    1: VacuumActivity.IDLE,  # Idle
+    2: VacuumActivity.IDLE,  # Idle2
+    3: VacuumActivity.CLEANING,  # Cleaning
+    4: VacuumActivity.RETURNING,  # Returning
+    5: VacuumActivity.DOCKED,  # Docked
+    6: VacuumActivity.CLEANING,  # VacuumingAndMopping
 }

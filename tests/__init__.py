@@ -1,4 +1,5 @@
 """Tests for the Xiaomi Viomi integration."""
+
 from typing import Any
 from unittest.mock import patch
 
@@ -54,6 +55,7 @@ def get_mocked_entry():
     return MockConfigEntry(
         domain=CUSTOM_DOMAIN,
         title=TEST_NAME,
+        unique_id=TEST_MAC,
         data={
             "host": TEST_HOST,
             "token": TEST_TOKEN,

@@ -1,43 +1,37 @@
 """Xiaomi Viomi integration."""
-import asyncio
 
-import voluptuous as vol
-from homeassistant.components.vacuum import PLATFORM_SCHEMA
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_TOKEN, DEVICE_DEFAULT_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-
-from .const import DOMAIN  # noqa: F401
-
-PLATFORMS = ["vacuum"]
-
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Optional(CONF_NAME, default=DEVICE_DEFAULT_NAME): cv.string,
-        vol.Required(CONF_TOKEN): cv.string,
-        vol.Required(CONF_HOST): cv.string,
-    }
+from homeassistant.const import (
+    CONF_HOST,
+    CONF_MODEL,
+    CONF_NAME,
+    CONF_TOKEN,
+    Platform,
 )
+from homeassistant.core import HomeAssistant
+
+from .coordinator import PatchedViomiVacuum, ViomiConfigEntry, ViomiCoordinator
+
+PLATFORMS = [Platform.VACUUM, Platform.SENSOR]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ViomiConfigEntry) -> bool:
     """Set up Xiaomi Viomi from a config entry."""
-    for component in PLATFORMS:
-        hass.async_create_task(
-            hass.config_entries.async_forward_entry_setup(entry, component)
+    if CONF_MODEL not in entry.data:
+        # Entries created by 0.0.3 do not have the name and the model stored.
+        hass.config_entries.async_update_entry(
+            entry,
+            data={**entry.data, CONF_NAME: entry.title, CONF_MODEL: entry.title},
         )
 
+    device = PatchedViomiVacuum(entry.data[CONF_HOST], entry.data[CONF_TOKEN])
+    coordinator = ViomiCoordinator(hass, entry, device)
+    await coordinator.async_config_entry_first_refresh()
+    entry.runtime_data = coordinator
+
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
+async def async_unload_entry(hass: HomeAssistant, entry: ViomiConfigEntry) -> bool:
     """Unload a config entry."""
-    return all(
-        await asyncio.gather(
-            *[
-                hass.config_entries.async_forward_entry_unload(entry, component)
-                for component in PLATFORMS
-            ]
-        )
-    )
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

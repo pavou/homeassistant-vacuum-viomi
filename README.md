@@ -1,10 +1,8 @@
 # Homeassistant Vacuum Viomi integration for HACS
 
-[![SWUbanner](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner2-direct.svg)](https://github.com/vshymanskyy/StandWithUkraine/blob/main/docs/README.md)
-
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
 [![codecov](https://codecov.io/gh/nergal/homeassistant-vacuum-viomi/branch/master/graph/badge.svg?token=MUHLPCJY2G)](https://codecov.io/gh/nergal/homeassistant-vacuum-viomi)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-261230.svg)](https://github.com/astral-sh/ruff)
 ![GitHub](https://img.shields.io/github/license/nergal/homeassistant-vacuum-viomi)
 [![Validation flow](https://github.com/nergal/homeassistant-vacuum-viomi/actions/workflows/workflow.yaml/badge.svg)](https://github.com/nergal/homeassistant-vacuum-viomi/actions/workflows/workflow.yaml)
 
@@ -20,15 +18,28 @@ Install it through HACS by adding this as a custom repository: https://github.co
 ### Manual
 Copy contents of `custom_components` folder to your Home Assistant `config/custom_components` folder. Restart Home Assistant, and then the integration can be added and configured through the native integration setup. If you don't see it in the native integrations list, press Ctrl+F5 to refresh the browser while you're on that page and retry.
 
-Also you may add the manual configuration to `configuration.yaml` file, like the example below:
+Requires Home Assistant 2026.10.4 or newer.
 
-```
+### YAML (deprecated)
+The `configuration.yaml` platform is still accepted, but it is only imported into a regular config entry on startup and a repair issue asks you to remove it. Prefer the UI. Existing YAML example:
+
+```yaml
 vacuum:
   - platform: xiaomi_viomi
     host: 192.168.1.1
     token: !secret vacuum
     name: Vacuum V8
 ```
+
+## Upgrading from 0.0.4
+Version 0.1.0 follows the changes of Home Assistant core, which break a few things:
+
+* The battery level is no longer an attribute (`battery_level`) of the vacuum. Use the new `sensor.<name>_battery` entity.
+* The `vacuum.turn_on`, `vacuum.turn_off`, `vacuum.toggle` and `vacuum.start_pause` services no longer exist in Home Assistant. Use `vacuum.start`, `vacuum.pause`, `vacuum.stop` and `vacuum.return_to_base`.
+* The `vacuum.clean_spot` service is not supported (the device never supported it).
+* YAML configuration is only imported into a config entry.
+
+Existing config entries keep their entity IDs.
 
 ## Tested models
 | Model | Device ID | Aliases | Status |
@@ -43,8 +54,3 @@ or any of its subsidiaries or its affiliates. The official Xiaomi website can be
 
 ## License
 This project is under the MIT license.
-
-## Additional information for users from Russia and Belarus
-* Russia has [illegally annexed Crimea in 2014](https://en.wikipedia.org/wiki/Annexation_of_Crimea_by_the_Russian_Federation) and [brought the war in Donbas](https://en.wikipedia.org/wiki/War_in_Donbas) followed by [full-scale invasion of Ukraine in 2022](https://en.wikipedia.org/wiki/2022_Russian_invasion_of_Ukraine).
-* Russia has brought sorrow and devastations to millions of Ukrainians, killed hundreds of innocent people, damaged thousands of buildings, and forced several million people to flee.
-* [Putin khuylo!](https://en.wikipedia.org/wiki/Putin_khuylo!)

@@ -8,3 +8,5 @@ coverage.xml
 .DS_Store
 *.tmp
 *.log
+.venv/
+.ruff_cache/
