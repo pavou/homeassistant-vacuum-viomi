@@ -31,7 +31,7 @@ from homeassistant.helpers.selector import (
 from miio import DeviceException
 from miio.integrations.vacuum.viomi.viomivacuum import ViomiVacuum
 
-from .const import CONF_ROOMS, DOMAIN, ROOM_ID_CHOICES
+from .const import CONF_ROOMS, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -157,7 +157,7 @@ class ViomiOptionsFlow(OptionsFlowWithReload):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Pick the room numbers of the map."""
+        """Add room numbers beyond the default ones."""
         errors: dict[str, str] = {}
         known = self.config_entry.options.get(CONF_ROOMS, {})
         if user_input is not None:
@@ -184,7 +184,7 @@ class ViomiOptionsFlow(OptionsFlowWithReload):
                     {
                         probatio.Optional(CONF_ROOMS): SelectSelector(
                             SelectSelectorConfig(
-                                options=[str(room_id) for room_id in ROOM_ID_CHOICES],
+                                options=[],
                                 multiple=True,
                                 custom_value=True,
                                 mode=SelectSelectorMode.LIST,

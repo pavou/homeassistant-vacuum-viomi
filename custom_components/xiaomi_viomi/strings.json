@@ -41,10 +41,10 @@
     },
     "step": {
       "init": {
-        "title": "Rooms",
-        "description": "The robot cannot tell which rooms its map has. Select the room numbers of your map to clean rooms from Home Assistant, then match each room to an area in the settings of the vacuum. The robot numbers its rooms from 10; type a number to add one that is not listed. Leave empty to turn room cleaning off.",
+        "title": "Extra rooms",
+        "description": "The vacuum already offers the room numbers 10 to 19; map the ones your map uses to areas in the settings of the vacuum. If your map uses other numbers, type them here to offer them too. Leave empty to offer only the default numbers.",
         "data": {
-          "rooms": "Rooms"
+          "rooms": "Extra room numbers"
         }
       }
     }

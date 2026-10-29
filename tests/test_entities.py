@@ -48,26 +48,31 @@ def _vacuum(hass: HomeAssistant):
     return hass.data[DATA_COMPONENT].get_entity(get_entity_id())
 
 
-async def test_no_room_cleaning_without_rooms(hass: HomeAssistant):
+async def test_default_room_numbers_are_segments(hass: HomeAssistant):
     with mocked_viomi_device():
         await _setup(hass)
-
-        assert _vacuum(hass).supported_features == SUPPORT_VIOMI
-        assert await _vacuum(hass).async_get_segments() == []
-
-
-async def test_rooms_are_segments(hass: HomeAssistant):
-    with mocked_viomi_device():
-        await _setup(hass, {"rooms": ROOMS})
 
         vacuum = _vacuum(hass)
         assert vacuum.supported_features == (
             SUPPORT_VIOMI | VacuumEntityFeature.CLEAN_AREA
         )
         assert await vacuum.async_get_segments() == [
-            Segment(id="10", name="Kitchen"),
-            Segment(id="11", name="Living room"),
+            Segment(id=str(room_id), name=f"Room {room_id}")
+            for room_id in range(10, 20)
         ]
+
+
+async def test_configured_rooms_add_to_and_rename_the_defaults(hass: HomeAssistant):
+    with mocked_viomi_device():
+        await _setup(hass, {"rooms": {**ROOMS, "25": "Attic"}})
+
+        segments = await _vacuum(hass).async_get_segments()
+
+        assert Segment(id="10", name="Kitchen") in segments
+        assert Segment(id="11", name="Living room") in segments
+        assert Segment(id="12", name="Room 12") in segments
+        assert segments[-1] == Segment(id="25", name="Attic")
+        assert len(segments) == 11
 
 
 async def test_clean_rooms_sends_the_room_ids(hass: HomeAssistant):

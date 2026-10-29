@@ -45,6 +45,7 @@ from .const import (
     ATTR_SIDE_BRUSH_LEFT,
     ATTR_STATUS,
     CONF_ROOMS,
+    DEFAULT_ROOM_IDS,
     DOMAIN,
     ERRORS_FALSE_POSITIVE,
     STATE_CODE_TO_ACTIVITY,
@@ -103,12 +104,7 @@ class ViomiVacuumEntity(ViomiEntity, StateVacuumEntity):
         super().__init__(coordinator)
         self._attr_unique_id = self._device_unique_id
 
-    @property
-    def supported_features(self) -> VacuumEntityFeature:
-        """Return the features; cleaning rooms needs the rooms to be configured."""
-        if self._rooms:
-            return SUPPORT_VIOMI | VacuumEntityFeature.CLEAN_AREA
-        return SUPPORT_VIOMI
+    _attr_supported_features = SUPPORT_VIOMI | VacuumEntityFeature.CLEAN_AREA
 
     @property
     def _rooms(self) -> dict[str, str]:
@@ -163,8 +159,13 @@ class ViomiVacuumEntity(ViomiEntity, StateVacuumEntity):
         return bool(error_code and error_code not in ERRORS_FALSE_POSITIVE)
 
     async def async_get_segments(self) -> list[Segment]:
-        """Return the rooms configured in the options."""
-        return [Segment(id=room_id, name=name) for room_id, name in self._rooms.items()]
+        """Return the default room numbers and the extra ones set in the options."""
+        rooms = {str(room_id): f"Room {room_id}" for room_id in DEFAULT_ROOM_IDS}
+        rooms.update(self._rooms)
+        return [
+            Segment(id=room_id, name=rooms[room_id])
+            for room_id in sorted(rooms, key=int)
+        ]
 
     async def async_clean_segments(self, segment_ids: list[str], **kwargs: Any) -> None:
         """Clean the given rooms."""

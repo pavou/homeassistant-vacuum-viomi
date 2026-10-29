@@ -11,6 +11,7 @@ from homeassistant.components.vacuum import (
     SERVICE_START,
     SERVICE_STOP,
     VacuumActivity,
+    VacuumEntityFeature,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
@@ -44,7 +45,9 @@ async def test_vacuum_state(hass: HomeAssistant):
             "Medium",
             "Turbo",
         ]
-        assert state.attributes["supported_features"] == SUPPORT_FEATURES
+        assert state.attributes["supported_features"] == (
+            SUPPORT_FEATURES | VacuumEntityFeature.CLEAN_AREA
+        )
         assert state.attributes["status"] == "docked"
         assert "error" not in state.attributes
 
