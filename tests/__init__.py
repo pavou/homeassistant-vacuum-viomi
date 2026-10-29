@@ -67,7 +67,7 @@ def get_mocked_entry(options: dict[str, Any] | None = None):
     )
 
 
-def mocked_viomi_device(device_state_adjustment=None):
+def mocked_viomi_device(device_state_adjustment=None, consumables=None):
     state = MOCKED_DEVICE_STATE
     if device_state_adjustment is not None:
         state = {**MOCKED_DEVICE_STATE, **device_state_adjustment}
@@ -82,7 +82,7 @@ def mocked_viomi_device(device_state_adjustment=None):
             return [None]
         # Request for getting state of consumables
         elif command == "get_consumables":
-            return [0] * 5
+            return consumables or [0] * 5
         # Request DND configuration
         elif command == "get_notdisturb":
             return [0] * 5

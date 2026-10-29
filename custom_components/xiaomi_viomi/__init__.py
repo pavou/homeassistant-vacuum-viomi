@@ -11,7 +11,13 @@ from homeassistant.core import HomeAssistant
 
 from .coordinator import PatchedViomiVacuum, ViomiConfigEntry, ViomiCoordinator
 
-PLATFORMS = [Platform.VACUUM, Platform.SENSOR]
+PLATFORMS = [
+    Platform.BINARY_SENSOR,
+    Platform.SELECT,
+    Platform.SENSOR,
+    Platform.SWITCH,
+    Platform.VACUUM,
+]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ViomiConfigEntry) -> bool:

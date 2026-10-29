@@ -48,5 +48,53 @@
         }
       }
     }
+  },
+  "entity": {
+    "select": {
+      "clean_mode": {
+        "name": "Clean mode",
+        "state": {
+          "vacuum": "Vacuum",
+          "vacuum_and_mop": "Vacuum and mop",
+          "mop": "Mop"
+        }
+      }
+    },
+    "switch": {
+      "repeat_cleaning": {
+        "name": "Repeat cleaning"
+      },
+      "do_not_disturb": {
+        "name": "Do not disturb"
+      }
+    },
+    "binary_sensor": {
+      "mop_attached": {
+        "name": "Mop attached"
+      }
+    },
+    "sensor": {
+      "cleaned_area": {
+        "name": "Cleaned area"
+      },
+      "cleaning_time": {
+        "name": "Cleaning time"
+      },
+      "error": {
+        "name": "Error"
+      },
+      "main_brush_hours": {
+        "name": "Main brush hours"
+      },
+      "side_brush_hours": {
+        "name": "Side brush hours"
+      },
+      "filter_hours": {
+        "name": "Filter hours"
+      },
+      "mop_hours": {
+        "name": "Mop hours"
+      }
+    }
   }
 }
