@@ -166,36 +166,49 @@ async def test_options_flow_sets_the_rooms(hass: HomeAssistant) -> None:
 
     with mocked_viomi_device():
         result = await hass.config_entries.options.async_configure(
-            result["flow_id"], {"rooms": "10: Kitchen\n\n 011 : Living room \n"}
+            result["flow_id"], {"rooms": ["10", "011", "25"]}
         )
         await hass.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert entry.options == {"rooms": {"10": "Kitchen", "11": "Living room"}}
+    assert entry.options == {
+        "rooms": {"10": "Room 10", "11": "Room 11", "25": "Room 25"}
+    }
 
 
-@pytest.mark.parametrize(
-    "text", ["Kitchen", "x: Kitchen", "10:", "10: A\n10: B", "-1: A"]
-)
-async def test_options_flow_rejects_bad_rooms(hass: HomeAssistant, text) -> None:
+@pytest.mark.parametrize("room_ids", [["x"], ["10", "-1"], ["1.5"]])
+async def test_options_flow_rejects_bad_rooms(hass: HomeAssistant, room_ids) -> None:
     _, result = await _start_options_flow(hass)
 
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {"rooms": text}
+        result["flow_id"], {"rooms": room_ids}
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"rooms": "invalid_rooms"}
 
 
-async def test_options_flow_shows_and_clears_the_rooms(hass: HomeAssistant) -> None:
-    entry, result = await _start_options_flow(hass, {"rooms": {"10": "Kitchen"}})
+async def test_options_flow_keeps_names_and_clears_the_rooms(
+    hass: HomeAssistant,
+) -> None:
+    entry, result = await _start_options_flow(
+        hass, {"rooms": {"10": "Kitchen", "11": "Hall"}}
+    )
     (key,) = result["data_schema"].schema
-    assert key.description == {"suggested_value": "10: Kitchen"}
+    assert key.description == {"suggested_value": ["10", "11"]}
 
     with mocked_viomi_device():
         result = await hass.config_entries.options.async_configure(
-            result["flow_id"], {"rooms": ""}
+            result["flow_id"], {"rooms": ["10", "12"]}
+        )
+        await hass.async_block_till_done()
+
+    assert entry.options == {"rooms": {"10": "Kitchen", "12": "Room 12"}}
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    with mocked_viomi_device():
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"], {"rooms": []}
         )
         await hass.async_block_till_done()
 

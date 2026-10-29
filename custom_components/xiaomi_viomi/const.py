@@ -10,6 +10,8 @@ SCAN_INTERVAL = timedelta(seconds=30)
 
 # Option: the rooms of the robot map, {"10": "Kitchen"}. The robot cannot list them.
 CONF_ROOMS = "rooms"
+# Room numbers offered in the options flow; the map of the robot numbers its rooms from 10.
+ROOM_ID_CHOICES = range(10, 20)
 
 DEVICE_PROPERTIES = [
     "battary_life",

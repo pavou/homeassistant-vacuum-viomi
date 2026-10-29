@@ -37,12 +37,12 @@
   },
   "options": {
     "error": {
-      "invalid_rooms": "Use one room per line like \"10: Kitchen\": a number, a colon and a name. Numbers must not repeat."
+      "invalid_rooms": "Room numbers must be whole numbers."
     },
     "step": {
       "init": {
         "title": "Rooms",
-        "description": "The robot cannot tell which rooms its map has. List them to clean rooms from Home Assistant, one per line as \"room number: name\", for example \"10: Kitchen\". Leave empty to turn room cleaning off.",
+        "description": "The robot cannot tell which rooms its map has. Select the room numbers of your map to clean rooms from Home Assistant, then match each room to an area in the settings of the vacuum. The robot numbers its rooms from 10; type a number to add one that is not listed. Leave empty to turn room cleaning off.",
         "data": {
           "rooms": "Rooms"
         }

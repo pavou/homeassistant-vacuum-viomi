@@ -23,11 +23,15 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.selector import TextSelector, TextSelectorConfig
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 from miio import DeviceException
 from miio.integrations.vacuum.viomi.viomivacuum import ViomiVacuum
 
-from .const import CONF_ROOMS, DOMAIN
+from .const import CONF_ROOMS, DOMAIN, ROOM_ID_CHOICES
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -70,28 +74,6 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         CONF_NAME: data.get(CONF_NAME) or info.model,
         CONF_MAC: format_mac(info.mac_address),
     }
-
-
-def parse_rooms(text: str) -> dict[str, str]:
-    """Parse lines like ``10: Kitchen`` into ``{"10": "Kitchen"}``.
-
-    Raises ValueError on a line that is not ``<number>: <name>`` or on a repeated id.
-    """
-    rooms: dict[str, str] = {}
-    for line in text.splitlines():
-        if not line.strip():
-            continue
-        room_id, separator, name = line.partition(":")
-        room_id, name = room_id.strip(), name.strip()
-        if not separator or not room_id.isdecimal() or not name or room_id in rooms:
-            raise ValueError(line)
-        rooms[str(int(room_id))] = name
-    return rooms
-
-
-def format_rooms(rooms: dict[str, str]) -> str:
-    """Format the rooms as the options form shows them."""
-    return chr(10).join(f"{room_id}: {name}" for room_id, name in rooms.items())
 
 
 class XiaomiViomiFlowHandler(ConfigFlow, domain=DOMAIN):
@@ -175,32 +157,41 @@ class ViomiOptionsFlow(OptionsFlowWithReload):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Manage the options."""
+        """Pick the room numbers of the map."""
         errors: dict[str, str] = {}
+        known = self.config_entry.options.get(CONF_ROOMS, {})
         if user_input is not None:
-            try:
-                rooms = parse_rooms(user_input.get(CONF_ROOMS) or "")
-            except ValueError:
-                errors[CONF_ROOMS] = "invalid_rooms"
-            else:
+            room_ids = user_input.get(CONF_ROOMS, [])
+            if all(room_id.isdecimal() for room_id in room_ids):
+                # Keep the names of known rooms; the others get a neutral name that
+                # the user maps to a Home Assistant area in the vacuum settings.
+                rooms = {
+                    str(int(room_id)): known.get(
+                        str(int(room_id)), f"Room {int(room_id)}"
+                    )
+                    for room_id in room_ids
+                }
                 return self.async_create_entry(
                     data={CONF_ROOMS: rooms} if rooms else {}
                 )
+            errors[CONF_ROOMS] = "invalid_rooms"
 
-        suggested = user_input or {
-            CONF_ROOMS: format_rooms(self.config_entry.options.get(CONF_ROOMS, {}))
-        }
         return self.async_show_form(
             step_id="init",
             errors=errors,
             data_schema=self.add_suggested_values_to_schema(
                 probatio.Schema(
                     {
-                        probatio.Optional(CONF_ROOMS): TextSelector(
-                            TextSelectorConfig(multiline=True)
+                        probatio.Optional(CONF_ROOMS): SelectSelector(
+                            SelectSelectorConfig(
+                                options=[str(room_id) for room_id in ROOM_ID_CHOICES],
+                                multiple=True,
+                                custom_value=True,
+                                mode=SelectSelectorMode.LIST,
+                            )
                         )
                     }
                 ),
-                suggested,
+                {CONF_ROOMS: list((user_input or {}).get(CONF_ROOMS, known))},
             ),
         )
