@@ -50,6 +50,20 @@
     }
   },
   "entity": {
+    "button": {
+      "reset_main_brush": {
+        "name": "Reset main brush"
+      },
+      "reset_side_brush": {
+        "name": "Reset side brush"
+      },
+      "reset_filter": {
+        "name": "Reset filter"
+      },
+      "reset_mop": {
+        "name": "Reset mop"
+      }
+    },
     "select": {
       "clean_mode": {
         "name": "Clean mode",

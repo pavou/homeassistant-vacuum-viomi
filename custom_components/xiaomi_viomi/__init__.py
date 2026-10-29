@@ -13,6 +13,7 @@ from .coordinator import PatchedViomiVacuum, ViomiConfigEntry, ViomiCoordinator
 
 PLATFORMS = [
     Platform.BINARY_SENSOR,
+    Platform.BUTTON,
     Platform.SELECT,
     Platform.SENSOR,
     Platform.SWITCH,

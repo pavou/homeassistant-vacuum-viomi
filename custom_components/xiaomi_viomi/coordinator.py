@@ -28,6 +28,10 @@ class PatchedViomiVacuum(ViomiVacuum):
         """Locate a device."""
         self.send("set_resetpos", [1])
 
+    def reset_consumable(self, consumable: int) -> None:
+        """Zero the worked hours of a consumable (1 main brush, 2 side brush, 3 filter, 4 mop)."""
+        self.send("set_consumables", [consumable])
+
     def clean_rooms(self, room_ids: list[int]) -> None:
         """Clean the given rooms (python-miio can only look rooms up by schedule)."""
         edge_state = self.get_properties(["mode"])

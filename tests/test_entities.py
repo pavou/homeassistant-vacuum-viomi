@@ -1,6 +1,8 @@
 """Test the entities and room cleaning of the Xiaomi Viomi integration."""
 
 import pytest
+from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN
+from homeassistant.components.button import SERVICE_PRESS
 from homeassistant.components.select import (
     ATTR_OPTION,
     SERVICE_SELECT_OPTION,
@@ -159,6 +161,25 @@ async def test_error_sensor_reports_a_real_error(hass: HomeAssistant):
         await _setup(hass)
 
         assert _state(hass, "sensor.mocked_vacuum_error") == "Low battery"
+
+
+@pytest.mark.parametrize(
+    ("name", "consumable"),
+    [("main_brush", 1), ("side_brush", 2), ("filter", 3), ("mop", 4)],
+)
+async def test_reset_consumable_buttons(hass: HomeAssistant, name, consumable):
+    with mocked_viomi_device() as mock_device_send:
+        await _setup(hass)
+        mock_device_send.reset_mock()
+
+        await hass.services.async_call(
+            BUTTON_DOMAIN,
+            SERVICE_PRESS,
+            {"entity_id": f"button.mocked_vacuum_reset_{name}"},
+            blocking=True,
+        )
+
+        mock_device_send.assert_any_call("set_consumables", [consumable])
 
 
 async def test_consumable_sensors_report_the_worked_hours(hass: HomeAssistant):
