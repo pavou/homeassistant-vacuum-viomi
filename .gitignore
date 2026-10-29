@@ -10,3 +10,5 @@ coverage.xml
 *.log
 .venv/
 .ruff_cache/
+
+.env
