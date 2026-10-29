@@ -147,3 +147,57 @@ async def test_import_cannot_connect(hass: HomeAssistant) -> None:
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "cannot_connect"
+
+
+async def _start_options_flow(hass: HomeAssistant, options: dict | None = None):
+    entry = get_mocked_entry(options)
+    with mocked_viomi_device():
+        entry.add_to_hass(hass)
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    return entry, result
+
+
+async def test_options_flow_sets_the_rooms(hass: HomeAssistant) -> None:
+    entry, result = await _start_options_flow(hass)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "init"
+
+    with mocked_viomi_device():
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"], {"rooms": "10: Kitchen\n\n 011 : Living room \n"}
+        )
+        await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options == {"rooms": {"10": "Kitchen", "11": "Living room"}}
+
+
+@pytest.mark.parametrize(
+    "text", ["Kitchen", "x: Kitchen", "10:", "10: A\n10: B", "-1: A"]
+)
+async def test_options_flow_rejects_bad_rooms(hass: HomeAssistant, text) -> None:
+    _, result = await _start_options_flow(hass)
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"rooms": text}
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"rooms": "invalid_rooms"}
+
+
+async def test_options_flow_shows_and_clears_the_rooms(hass: HomeAssistant) -> None:
+    entry, result = await _start_options_flow(hass, {"rooms": {"10": "Kitchen"}})
+    (key,) = result["data_schema"].schema
+    assert key.description == {"suggested_value": "10: Kitchen"}
+
+    with mocked_viomi_device():
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"], {"rooms": ""}
+        )
+        await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options == {}

@@ -51,7 +51,7 @@ def get_entity_id(use_model=False) -> str:
     return DOMAIN + "." + (TEST_MODEL.replace(".", "_") if use_model else TEST_NAME)
 
 
-def get_mocked_entry():
+def get_mocked_entry(options: dict[str, Any] | None = None):
     return MockConfigEntry(
         domain=CUSTOM_DOMAIN,
         title=TEST_NAME,
@@ -63,6 +63,7 @@ def get_mocked_entry():
             "mac": TEST_MAC,
             "model": TEST_MODEL,
         },
+        options=options or {},
     )
 
 

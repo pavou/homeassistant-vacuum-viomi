@@ -8,6 +8,9 @@ DOMAIN = "xiaomi_viomi"
 
 SCAN_INTERVAL = timedelta(seconds=30)
 
+# Option: the rooms of the robot map, {"10": "Kitchen"}. The robot cannot list them.
+CONF_ROOMS = "rooms"
+
 DEVICE_PROPERTIES = [
     "battary_life",
     "box_type",

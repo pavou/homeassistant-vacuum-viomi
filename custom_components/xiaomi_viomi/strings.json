@@ -34,5 +34,19 @@
       "title": "The Xiaomi Viomi YAML configuration is deprecated",
       "description": "Configuring Xiaomi Viomi using YAML is deprecated.\n\nYour existing YAML configuration has been imported into the UI automatically. Remove the `xiaomi_viomi` platform from your `vacuum:` YAML configuration and restart Home Assistant to fix this issue."
     }
+  },
+  "options": {
+    "error": {
+      "invalid_rooms": "Use one room per line like \"10: Kitchen\": a number, a colon and a name. Numbers must not repeat."
+    },
+    "step": {
+      "init": {
+        "title": "Rooms",
+        "description": "The robot cannot tell which rooms its map has. List them to clean rooms from Home Assistant, one per line as \"room number: name\", for example \"10: Kitchen\". Leave empty to turn room cleaning off.",
+        "data": {
+          "rooms": "Rooms"
+        }
+      }
+    }
   }
 }

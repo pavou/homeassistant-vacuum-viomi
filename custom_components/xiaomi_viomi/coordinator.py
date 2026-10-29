@@ -28,6 +28,11 @@ class PatchedViomiVacuum(ViomiVacuum):
         """Locate a device."""
         self.send("set_resetpos", [1])
 
+    def clean_rooms(self, room_ids: list[int]) -> None:
+        """Clean the given rooms (python-miio can only look rooms up by schedule)."""
+        edge_state = self.get_properties(["mode"])
+        self.send("set_mode_withroom", edge_state + [1, len(room_ids)] + room_ids)
+
 
 @dataclass(frozen=True)
 class ViomiData:

@@ -1,15 +1,15 @@
 """Vacuum platform of the Xiaomi Viomi integration."""
 
 import logging
-from collections.abc import Callable
-from functools import partial
 from typing import Any
 
 import probatio
 from homeassistant.components.vacuum import (
     ATTR_CLEANED_AREA,
+    Segment,
     StateVacuumEntity,
     VacuumActivity,
+    VacuumEntityFeature,
 )
 from homeassistant.components.vacuum import (
     PLATFORM_SCHEMA as VACUUM_PLATFORM_SCHEMA,
@@ -30,7 +30,6 @@ from homeassistant.helpers.entity_platform import (
     AddEntitiesCallback,
 )
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from miio import DeviceException
 from miio.integrations.vacuum.viomi.viomivacuum import ViomiVacuumSpeed
 
 from .const import (
@@ -45,6 +44,7 @@ from .const import (
     ATTR_MOP_LEFT,
     ATTR_SIDE_BRUSH_LEFT,
     ATTR_STATUS,
+    CONF_ROOMS,
     DOMAIN,
     ERRORS_FALSE_POSITIVE,
     STATE_CODE_TO_ACTIVITY,
@@ -96,13 +96,23 @@ class ViomiVacuumEntity(ViomiEntity, StateVacuumEntity):
     """Xiaomi Viomi vacuum."""
 
     _attr_name = None
-    _attr_supported_features = SUPPORT_VIOMI
     _attr_fan_speed_list = list(FAN_SPEEDS)
 
     def __init__(self, coordinator: ViomiCoordinator) -> None:
         """Initialize the vacuum."""
         super().__init__(coordinator)
         self._attr_unique_id = self._device_unique_id
+
+    @property
+    def supported_features(self) -> VacuumEntityFeature:
+        """Return the features; cleaning rooms needs the rooms to be configured."""
+        if self._rooms:
+            return SUPPORT_VIOMI | VacuumEntityFeature.CLEAN_AREA
+        return SUPPORT_VIOMI
+
+    @property
+    def _rooms(self) -> dict[str, str]:
+        return self.coordinator.config_entry.options.get(CONF_ROOMS, {})
 
     @property
     def activity(self) -> VacuumActivity | None:
@@ -152,18 +162,17 @@ class ViomiVacuumEntity(ViomiEntity, StateVacuumEntity):
         error_code = self.coordinator.data.status.error_code
         return bool(error_code and error_code not in ERRORS_FALSE_POSITIVE)
 
-    async def _try_command(
-        self, mask_error: str, func: Callable[..., Any], *args: Any
-    ) -> bool:
-        """Call a vacuum command handling error messages."""
-        try:
-            await self.hass.async_add_executor_job(partial(func, *args))
-        except DeviceException as exc:
-            _LOGGER.error(mask_error, exc)
-            return False
+    async def async_get_segments(self) -> list[Segment]:
+        """Return the rooms configured in the options."""
+        return [Segment(id=room_id, name=name) for room_id, name in self._rooms.items()]
 
-        await self.coordinator.async_request_refresh()
-        return True
+    async def async_clean_segments(self, segment_ids: list[str], **kwargs: Any) -> None:
+        """Clean the given rooms."""
+        await self._try_command(
+            "Unable to clean the rooms: %s",
+            self.coordinator.device.clean_rooms,
+            [int(segment_id) for segment_id in segment_ids],
+        )
 
     async def async_start(self) -> None:
         """Start or resume the cleaning task."""

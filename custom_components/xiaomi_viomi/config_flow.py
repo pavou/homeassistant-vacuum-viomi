@@ -5,7 +5,12 @@ from typing import Any
 
 import probatio
 from construct.core import ChecksumError
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlowWithReload,
+)
 from homeassistant.const import (
     CONF_HOST,
     CONF_MAC,
@@ -14,14 +19,15 @@ from homeassistant.const import (
     CONF_TOKEN,
     DEVICE_DEFAULT_NAME,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.device_registry import format_mac
+from homeassistant.helpers.selector import TextSelector, TextSelectorConfig
 from miio import DeviceException
 from miio.integrations.vacuum.viomi.viomivacuum import ViomiVacuum
 
-from .const import DOMAIN
+from .const import CONF_ROOMS, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -66,10 +72,38 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     }
 
 
+def parse_rooms(text: str) -> dict[str, str]:
+    """Parse lines like ``10: Kitchen`` into ``{"10": "Kitchen"}``.
+
+    Raises ValueError on a line that is not ``<number>: <name>`` or on a repeated id.
+    """
+    rooms: dict[str, str] = {}
+    for line in text.splitlines():
+        if not line.strip():
+            continue
+        room_id, separator, name = line.partition(":")
+        room_id, name = room_id.strip(), name.strip()
+        if not separator or not room_id.isdecimal() or not name or room_id in rooms:
+            raise ValueError(line)
+        rooms[str(int(room_id))] = name
+    return rooms
+
+
+def format_rooms(rooms: dict[str, str]) -> str:
+    """Format the rooms as the options form shows them."""
+    return chr(10).join(f"{room_id}: {name}" for room_id, name in rooms.items())
+
+
 class XiaomiViomiFlowHandler(ConfigFlow, domain=DOMAIN):
     """Handle a Xiaomi Viomi config flow."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> ViomiOptionsFlow:
+        """Get the options flow of the entry."""
+        return ViomiOptionsFlow()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -133,3 +167,40 @@ class XiaomiViomiFlowHandler(ConfigFlow, domain=DOMAIN):
         self._abort_if_unique_id_configured(updates=info)
 
         return self.async_create_entry(title=info[CONF_NAME], data=info)
+
+
+class ViomiOptionsFlow(OptionsFlowWithReload):
+    """Options of a Xiaomi Viomi entry: the rooms of the map."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Manage the options."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                rooms = parse_rooms(user_input.get(CONF_ROOMS) or "")
+            except ValueError:
+                errors[CONF_ROOMS] = "invalid_rooms"
+            else:
+                return self.async_create_entry(
+                    data={CONF_ROOMS: rooms} if rooms else {}
+                )
+
+        suggested = user_input or {
+            CONF_ROOMS: format_rooms(self.config_entry.options.get(CONF_ROOMS, {}))
+        }
+        return self.async_show_form(
+            step_id="init",
+            errors=errors,
+            data_schema=self.add_suggested_values_to_schema(
+                probatio.Schema(
+                    {
+                        probatio.Optional(CONF_ROOMS): TextSelector(
+                            TextSelectorConfig(multiline=True)
+                        )
+                    }
+                ),
+                suggested,
+            ),
+        )
